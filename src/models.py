@@ -46,4 +46,3 @@ class Favorites_People(db.Model):
     user_id:Mapped[int] = mapped_column(db.ForeignKey('user.id'), nullable=False)
     people_id:Mapped[int] = mapped_column(db.ForeignKey('people.id'), nullable=False)
 
-
