@@ -8,6 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
+from sqlalchemy import select
 from models import db, User
 #from models import Person
 
@@ -41,6 +42,32 @@ def handle_hello():
 
     response_body = {
         "msg": "Hello, this is your GET /user response "
+    }
+
+    return jsonify(response_body), 200
+
+@app.route('/people', methods=['GET'])
+def handle_get_people():
+
+    all_people = db.session.execute(select(People)).scalars().all()
+
+    response_body = {
+        "people": [person.serialize() for person in all_people]
+    }
+
+    return jsonify(response_body), 200
+@app.route('/people/<int:people_id>', methods=['GET'])
+def handle_get_person(people_id):
+    person = db.session.get(People, people_id)
+    if person is None:
+        return jsonify({"error":"Personaje no encontrado"}), 404
+    return jsonify(person.serialize()), 200
+
+@app.route('/planets', methods=['GET'])
+def handle_get_planets():
+
+    response_body = {
+        "planets": []
     }
 
     return jsonify(response_body), 200
