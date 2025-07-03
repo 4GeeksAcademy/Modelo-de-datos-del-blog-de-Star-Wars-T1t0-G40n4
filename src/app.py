@@ -81,17 +81,86 @@ def handle_get_planet(planet_id):
         return jsonify({"error": "Planeta no encontrado"}), 404
     return jsonify(planet.serialize()), 200
 
-@app.route('/favorite/planet/<int:planet_id', methods=['POST'])  
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    all_users = db.session.execute(select(User)).scalars().all()
+    reponse_body = {
+        "users":[user.serialize() for user in all_users]
+    }
+    return jsonify(reponse_body), 200
+
+@app.route('/users/favorites/<int:user_id>', methods=['GET'])
+def get_user_favorites(user_id):
+    fav_planets = db.session.execute(select(Favorites_Planets).where(Favorites_Planets.user_id == user_id)).scalars().all()
+    
+    fav_people = db.session.execute(select(Favorites_People).where(Favorites_People.user_id== user_id)).scalars().all()
+    reponse_body = {
+        "favorite_planets": [fav.planet_id for fav in fav_planets],
+        "favorite_people": [fav.people_id for fav in fav_people]
+    }
+    return jsonify(reponse_body), 200
+
+
+@app.route('/favorite/planet/<int:planet_id>', methods=['POST'])  
 def add_favorite_planet(planet_id):
     data= request.get_json()
     user_id = data.get("user_id")
     if not user_id:
-        return jsonify("error":"Falta user_id"),
+        return jsonify({"error":"Falta user_id"}),
 
     planet = db.session.get(Planets, planet_id)
     if planet is None:
-        return jsonify() 
+        return jsonify({"error":"Planeta no encontrado"}), 404
+    
+    favorite_planet = Favorites_Planets(user_id=user_id, planet_id=planet_id)
+    db.session.add(favorite_planet)
+    db.session.commit()
 
+    return jsonify({"msg":"Planeta añadido a favoritos"}), 201
+
+@app.route('/favorite/people/<int:people_id>', methods=['POST'])
+def add_favorite_people(people_id):
+    data = request.get_json()
+    user_id= data.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Falta user_id"}),
+    favorite_people = Favorites_People(users_id=user_id, people_id=people_id)
+    db.session.add(favorite_people)
+    db.session.commit()
+
+    return jsonify({"msg":"Personaje añadido a favoritos"}), 201
+
+@app.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
+def delete_favorite_planet(planet_id):
+    data = request.get_json()
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Falta user_id"}), 400
+
+    favorite = db.session.execute(select(Favorites_Planets).where(Favorites_Planets.user_id == user_id, Favorites_Planets.planet_id == planet_id)).scalar_one_or_none()
+
+    if favorite is None:
+        return jsonify({"error": "Favorito no encontrado"}), 404
+
+    db.session.delete(favorite)
+    db.session.commit()
+    return jsonify({"msg": "Planeta eliminado de favoritos"}), 200
+
+@app.route('/favorite/people/<int:people_id>', methods=['DELETE'])
+def delete_favorite_people(people_id):
+    data = request.get.json()
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"error":"Falta user_id"}),400
+    
+    favorite = db.session.execute(select(Favorites_People).where(Favorites_People.user_id==user_id, Favorites_People.people_id ==people_id)).scalar_one_or_none()
+
+    if favorite is None:
+        return jsonify({"error":"Favorito no encontrado"}), 404
+    
+    db.session.delete(favorite)
+    db.session.commit()
+    return jsonify({"msg":"Personaje eliminado de favoritos"})
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
